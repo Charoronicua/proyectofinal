@@ -45,5 +45,9 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+    <string>La app necesita acceso a la cámara para tomar fotos de reciclaje.</string>
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>La app necesita acceder a la galería para guardar fotos de reciclaje.</string>
 </dict>
 </plist>

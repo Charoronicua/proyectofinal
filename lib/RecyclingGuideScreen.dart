@@ -32,7 +32,6 @@ class _RecyclingGuideScreenState extends State<RecyclingGuideScreen> {
     });
   }
 
-
   Future<void> _checkConnectivityAndAnalyze() async {
     if (await _checkInternetConnection()) {
       _analyzeImage();
@@ -54,7 +53,6 @@ class _RecyclingGuideScreenState extends State<RecyclingGuideScreen> {
       _recyclingInfo = '';  // Limpiar cualquier dato previo
     });
 
-    // Verificar la conexión a Internet primero
     bool isConnected = await _checkInternetConnection();
     if (!isConnected) {
       setState(() {
@@ -62,22 +60,13 @@ class _RecyclingGuideScreenState extends State<RecyclingGuideScreen> {
         _isOffline = true;
         _recyclingInfo = 'Sin conexión a Internet. Verifica tu conexión.';
       });
-      debugPrint('No hay conexión a Internet');
-      return; // Salir antes de realizar la llamada si no hay conexión
+      return;
     }
 
     try {
-      debugPrint('Conexión a Internet disponible, procesando imagen...');
-
-      // Convertimos la imagen a bytes
       Uint8List imageBytes = await compute(_convertImageToBytes, widget.image);
 
-      debugPrint('Imagen convertida a bytes, enviando a Gemini...');
-
-      // Llamada a la API de Gemini
       String geminiResponse = await _getGeminiResponse(imageBytes);
-
-      debugPrint('Respuesta de Gemini recibida: $geminiResponse');
 
       final historyItem = HistoryItem(
         imagePath: widget.image.path,
@@ -87,7 +76,6 @@ class _RecyclingGuideScreenState extends State<RecyclingGuideScreen> {
 
       await _saveToHistorial(historyItem);
 
-      // Actualizamos el estado con la respuesta de Gemini
       if (mounted) {
         setState(() {
           _recyclingInfo = geminiResponse;
@@ -95,16 +83,11 @@ class _RecyclingGuideScreenState extends State<RecyclingGuideScreen> {
         });
       }
     } catch (e) {
-      debugPrint('Error al procesar la imagen: $e');
-
-      // Error en la comunicación con la API de Gemini
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-          _hasError = true;
-          _recyclingInfo = 'Error al procesar la imagen. Intenta de nuevo.';
-        });
-      }
+      setState(() {
+        _isLoading = false;
+        _hasError = true;
+        _recyclingInfo = 'Error al procesar la imagen. Intenta de nuevo.';
+      });
     }
   }
 
@@ -117,31 +100,15 @@ class _RecyclingGuideScreenState extends State<RecyclingGuideScreen> {
     }
   }
 
-
-
-
-
-
   Future<void> _saveToHistorial(HistoryItem item) async {
     try {
-      await Future.delayed(Duration(milliseconds: 100));
-
       final prefs = await SharedPreferences.getInstance();
       List<String> historial = prefs.getStringList('historial') ?? [];
-
       String itemJson = jsonEncode(item.toJson());
       historial.add(itemJson);
 
-      try {
-        await prefs.setStringList('historial', historial);
-        debugPrint('Elemento guardado en historial: $itemJson');
-      } catch (e) {
-        debugPrint('Error específico al guardar la lista: $e');
-        await Future.delayed(Duration(milliseconds: 500));
-        await prefs.setStringList('historial', historial);
-      }
+      await prefs.setStringList('historial', historial);
     } catch (e) {
-      debugPrint('Error al guardar en historial: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('No se pudo guardar en el historial. Por favor, intente nuevamente.'),
@@ -202,24 +169,17 @@ Consejo: Considera usar una botella reutilizable para reducir el consumo de plá
         images: [imageBytes],
       );
 
-      if (response == null ||
-          response.content == null ||
-          response.content!.parts == null ||
-          response.content!.parts!.isEmpty) {
+      if (response == null || response.content == null || response.content!.parts == null || response.content!.parts!.isEmpty) {
         throw Exception('Respuesta inválida de Gemini');
       }
 
       final responseText = response.content!.parts!.last.text ?? 'No se pudo obtener una respuesta válida';
 
-      return responseText.isNotEmpty
-          ? responseText
-          : 'La respuesta está vacía. Por favor, intenta de nuevo.';
+      return responseText.isNotEmpty ? responseText : 'La respuesta está vacía. Por favor, intenta de nuevo.';
     } catch (e) {
-      debugPrint('Error en Gemini API: $e');
       return 'No se pudo analizar la imagen. Error: ${e.toString()}';
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -323,120 +283,43 @@ Consejo: Considera usar una botella reutilizable para reducir el consumo de plá
                             ),
                           ],
                         ),
-                        child: Column(
-                          children: [
-                            CircularProgressIndicator(
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
-                            ),
-                            SizedBox(height: 16),
-                            Text(
-                              "Estamos procesando la imagen...",
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w500,
-                                color: Colors.green[800],
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                            SizedBox(height: 8),
-                            Text(
-                              "Analizando el tipo de residuo y generando recomendaciones",
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.green[600],
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
-                        ),
+                        child: CircularProgressIndicator(),
                       )
                     else if (_hasError)
                       Container(
                         padding: EdgeInsets.all(20),
                         decoration: BoxDecoration(
-                          color: Colors.green[50],
+                          color: Colors.red[50],
                           borderRadius: BorderRadius.circular(10),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black12,
-                              blurRadius: 8,
-                              offset: Offset(0, 4),
-                            ),
-                          ],
                         ),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              _isOffline ? Icons.wifi_off : Icons.error_outline,
-                              size: 48,
-                              color: Colors.red[400],
-                            ),
-                            SizedBox(height: 16),
-                            Text(
-                              _isOffline
-                                  ? "Sin conexión a Internet"
-                                  : "Error al procesar la imagen",
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.red[700],
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                            SizedBox(height: 8),
-                            Text(
-                              _isOffline
-                                  ? "Por favor, verifica tu conexión a Internet o datos móviles"
-                                  : "Ocurrió un error inesperado",
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey[700],
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                            SizedBox(height: 20),
-                            ElevatedButton.icon(
-                              onPressed: _checkConnectivityAndAnalyze,
-                              icon: Icon(Icons.refresh),
-                              label: Text("Volver a intentar"),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.green,
-                                foregroundColor: Colors.white,
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: 24,
-                                  vertical: 12,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                              ),
-                            ),
-                          ],
+                        child: Text(
+                          _recyclingInfo,
+                          style: TextStyle(
+                            color: Colors.red[900],
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       )
                     else
                       Container(
+                        padding: EdgeInsets.all(16),
                         decoration: BoxDecoration(
+                          color: Colors.white,
                           borderRadius: BorderRadius.circular(10),
-                          color: Colors.green[50],
-                          boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 4))],
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black12,
+                              blurRadius: 6,
+                              offset: Offset(0, 3),
+                            ),
+                          ],
                         ),
-                        padding: EdgeInsets.all(16.0),
                         child: Text(
                           _recyclingInfo,
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.black87,
-                            fontWeight: FontWeight.w400,
-                            height: 1.4,
-                            letterSpacing: 0.5,
-                            fontFamily: 'Roboto',
-                          ),
-                          textAlign: TextAlign.justify,
+                          style: TextStyle(fontSize: 18, color: Colors.black87),
                         ),
                       ),
-                    SizedBox(height: 20),
                   ],
                 ),
               ),
